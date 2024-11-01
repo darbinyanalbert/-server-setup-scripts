@@ -26,16 +26,10 @@ This repository contains an automated setup script for configuring your developm
    cd server-setup-scripts
    ```
 
-2. Make the installation script executable:
+2. Run the installation script:
 
    ```bash
-   chmod +x install.sh
+   ./init.sh
    ```
 
-3. Run the installation script:
-
-   ```bash
-   ./install.sh
-   ```
-
-4. Restart your terminal or run ``exec zsh`` to apply changes.
+3. Restart your terminal or run ``exec zsh`` to apply changes.
