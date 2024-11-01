@@ -5,14 +5,47 @@ REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Define colors for output
 GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
 NC='\033[0m' # No Color
 
-echo -e "${GREEN}Starting installation of Zsh, Oh My Zsh, Docker, Micro, Docker Compose, and plugins...${NC}"
+# Function to display a loading animation
+loading_animation() {
+    local pid=$1
+    local delay=0.75
+    local spin='-\|/'
+
+    echo -n "${YELLOW}Please wait...${NC} "
+    while ps -p $pid >/dev/null; do
+        for i in $(seq 0 3); do
+            echo -n "\b${spin:i:1}"
+            sleep $delay
+        done
+    done
+    echo -ne "\b" # Clear the spinner
+}
 
 # Function to check if a command exists
 command_exists() {
     command -v "$1" >/dev/null 2>&1
 }
+
+# Function for logging messages
+log_info() {
+    echo -e "${GREEN}[INFO] ${1}${NC}"
+}
+
+# Function for logging warnings
+log_warning() {
+    echo -e "${YELLOW}[WARNING] ${1}${NC}"
+}
+
+# Function for logging errors
+log_error() {
+    echo -e "${RED}[ERROR] ${1}${NC}"
+}
+
+log_info "Starting installation of Zsh, Oh My Zsh, Docker, Micro, Docker Compose, and plugins..."
+
 
 # Update package lists and install dependencies
 if command_exists apt; then
@@ -23,78 +56,79 @@ elif command_exists yum; then
 elif command_exists dnf; then
     sudo dnf install -y curl git wget zsh bind-utils telnet
 elif command_exists pacman; then
-    sudo pacman -Sy --noconfirm curl git wget zsh inetutils
+    sudo pacman -Sy --noconfirm curl git wget zsh bind-tools inetutils
 else
-    echo "Unsupported package manager. Exiting."
+    log_error "Unsupported package manager. Exiting."
     exit 1
 fi
 
 # Install Docker
 if ! command_exists docker; then
-    echo -e "${GREEN}Installing Docker...${NC}"
+    log_info "Installing Docker..."
     curl -fsSL https://get.docker.com -o get-docker.sh
-    sudo sh get-docker.sh
+    sudo sh get-docker.sh >/dev/null 2>&1
+    loading_animation $!
     rm get-docker.sh
     sudo systemctl start docker
     sudo systemctl enable docker
     sudo usermod -aG docker $USER
     newgrp docker
 else
-    echo -e "${GREEN}Docker is already installed.${NC}"
+    log_info "Docker is already installed."
 fi
 
 # Install Docker Compose
 if ! command_exists docker-compose; then
-    echo -e "${GREEN}Installing Docker Compose...${NC}"
+    log_info "Installing Docker Compose..."
     sudo curl -L "https://github.com/docker/compose/releases/download/$(curl -s https://api.github.com/repos/docker/compose/releases/latest | grep -oP '"tag_name": "\K(.*)(?=")')/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
     sudo chmod +x /usr/local/bin/docker-compose
 else
-    echo -e "${GREEN}Docker Compose is already installed.${NC}"
+    log_info "Docker Compose is already installed."
 fi
 
 # Install Micro
 if ! command_exists micro; then
-    echo -e "${GREEN}Installing Micro...${NC}"
+    log_info "Installing Micro..."
     curl https://getmic.ro | bash
     sudo mv micro /usr/local/bin
 else
-    echo -e "${GREEN}Micro is already installed.${NC}"
+    log_info "Micro is already installed."
 fi
 
 # Install Oh My Zsh
 if [ ! -d "$HOME/.oh-my-zsh" ]; then
-    echo -e "${GREEN}Installing Oh My Zsh...${NC}"
+    log_info "Installing Oh My Zsh..."
     sh -c "$(curl -fsSL https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
 else
-    echo -e "${GREEN}Oh My Zsh is already installed.${NC}"
+    log_info "Oh My Zsh is already installed."
 fi
 
 # Set Zsh as default shell
 if [ "$SHELL" != "$(command -v zsh)" ]; then
-    echo -e "${GREEN}Setting Zsh as the default shell...${NC}"
+    log_info "Setting Zsh as the default shell..."
     sudo chsh -s $(which zsh) $(whoami)
 fi
 
 # Install Zsh plugins (zsh-syntax-highlighting and zsh-autosuggestions)
 ZSH_CUSTOM=${ZSH_CUSTOM:-~/.oh-my-zsh/custom}
 
-echo -e "${GREEN}Installing Zsh plugins...${NC}"
+log_info "Installing Zsh plugins..."
 git clone https://github.com/zsh-users/zsh-syntax-highlighting.git "$ZSH_CUSTOM/plugins/zsh-syntax-highlighting"
 git clone https://github.com/zsh-users/zsh-autosuggestions.git "$ZSH_CUSTOM/plugins/zsh-autosuggestions"
 
 # Add plugins to .zshrc
 if ! grep -q "plugins=(git zsh-syntax-highlighting zsh-autosuggestions)" ~/.zshrc; then
-    echo -e "${GREEN}Adding plugins to .zshrc...${NC}"
+    log_info "Adding plugins to .zshrc..."
     sed -i 's/plugins=(git)/plugins=(git zsh-syntax-highlighting zsh-autosuggestions)/' ~/.zshrc
     sed -i 's/^ZSH_THEME=.*/ZSH_THEME="alanpeabody"/' ~/.zshrc
 fi
 
 # Add the repository to PATH in .zshrc
-echo "Adding repository to PATH in .zshrc..."
+log_info "Adding repository to PATH in .zshrc..."
 echo "export PATH=\"\$PATH:$REPO_DIR\"" >> ~/.zshrc
 
 # Add aliases to .zshrc
-echo "Adding aliases to .zshrc..."
+log_info "Adding aliases to .zshrc..."
 cat << 'EOF' >> ~/.zshrc
 
 # Custom Aliases
@@ -114,4 +148,4 @@ kns() {
 }
 EOF
 
-echo -e "${GREEN}Installation complete. Please restart your terminal or run 'exec zsh' to apply changes.${NC}"
+log_info "Installation complete! Please restart your terminal or run 'exec zsh' to apply changes."
