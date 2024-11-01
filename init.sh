@@ -17,13 +17,13 @@ command_exists() {
 # Update package lists and install dependencies
 if command_exists apt; then
     sudo apt update
-    sudo apt install -y curl git wget zsh nslookup telnet
+    sudo apt install -y curl git wget zsh dnsutils telnet
 elif command_exists yum; then
     sudo yum install -y curl git wget zsh bind-utils telnet
 elif command_exists dnf; then
     sudo dnf install -y curl git wget zsh bind-utils telnet
 elif command_exists pacman; then
-    sudo pacman -Sy --noconfirm curl git wget zsh bind-tools inetutils
+    sudo pacman -Sy --noconfirm curl git wget zsh inetutils
 else
     echo "Unsupported package manager. Exiting."
     exit 1
