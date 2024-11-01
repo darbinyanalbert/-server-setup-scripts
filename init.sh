@@ -11,17 +11,21 @@ NC='\033[0m' # No Color
 # Function to display a loading animation
 loading_animation() {
     local pid=$1
-    local delay=0.75
-    local spin='-\|/'
-
-    echo -n "${YELLOW}Please wait...${NC} "
-    while ps -p $pid >/dev/null; do
-        for i in $(seq 0 3); do
-            echo -n "\b${spin:i:1}"
-            sleep $delay
+    local delay=0.1
+    local spin='|/-\'
+    
+    if [ -n "$pid" ] && ps -p $pid > /dev/null 2>&1; then
+        echo -ne "${YELLOW}Please wait...${NC} "
+        while ps -p $pid > /dev/null 2>&1; do
+            for i in $(seq 0 3); do
+                echo -ne "\r${YELLOW}Please wait... ${spin:i:1}${NC}"
+                sleep $delay
+            done
         done
-    done
-    echo -ne "\b" # Clear the spinner
+        echo -ne "\r${GREEN}Done!${NC}           \n"
+    else
+        echo -e "${YELLOW}Loading...${NC}"
+    fi
 }
 
 # Function to check if a command exists
@@ -65,14 +69,33 @@ fi
 # Install Docker
 if ! command_exists docker; then
     log_info "Installing Docker..."
-    curl -fsSL https://get.docker.com -o get-docker.sh
-    sudo sh get-docker.sh >/dev/null 2>&1
+    
+    if command_exists apt; then
+        sudo apt update
+        sudo apt install -y docker.io &
+    elif command_exists yum; then
+        sudo yum install -y docker &
+    elif command_exists dnf; then
+        sudo dnf install -y docker &
+    elif command_exists pacman; then
+        sudo pacman -Sy --noconfirm docker &
+    else
+        echo "Unsupported package manager. Exiting."
+        exit 1
+    fi
+
+    # Show loading animation while installing Docker
     loading_animation $!
-    rm get-docker.sh
-    sudo systemctl start docker
-    sudo systemctl enable docker
-    sudo usermod -aG docker $USER
-    newgrp docker
+
+    # Start and enable Docker if systemd is available
+    if pidof systemd >/dev/null; then
+        sudo systemctl start docker
+        sudo systemctl enable docker
+        sudo usermod -aG docker $USER
+        newgrp docker
+    else
+        log_info "System does not use systemd. Please start Docker manually if required."
+    fi
 else
     log_info "Docker is already installed."
 fi
