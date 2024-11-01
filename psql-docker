@@ -1,0 +1,37 @@
+#!/bin/bash
+
+set -o errexit
+set -o pipefail
+set -o nounset
+
+# Default values
+HOST=""
+USER=""
+PASSWORD=""
+PORT="5432"  # Default PostgreSQL port
+
+# Function to display usage
+usage() {
+    echo "Usage: $0 [-u username] [-h hostname] [-p port] [-P password] [psql options]"
+    exit 1
+}
+
+# Parse command-line arguments
+while getopts "u:h:p:P:" opt; do
+    case $opt in
+        u) USER="$OPTARG" ;;
+        h) HOST="$OPTARG" ;;
+        p) PORT="$OPTARG" ;;
+        P) PASSWORD="$OPTARG" ;;
+        *) usage ;;
+    esac
+done
+
+# Shift parsed options away
+shift $((OPTIND - 1))
+
+# Run psql using Docker
+docker run -it --rm \
+    --network=host \
+    -e PGPASSWORD="$PASSWORD" \
+    postgres:latest psql -h "$HOST" -U "$USER" -p "$PORT" "$@"

@@ -1,0 +1,48 @@
+#!/bin/bash
+
+set -o errexit
+set -o pipefail
+set -o nounset
+
+# Default values
+HOSTNAME=""
+USERNAME=""
+PORT=""
+PASSWORD=""
+
+# Parse flags for hostname (-h) and username (-u)
+while getopts "h:u:" option; do
+    case "${option}" in
+        h) HOSTNAME=${OPTARG};;
+        u) USERNAME=${OPTARG};;
+        p) PORT=${OPTARG};;
+        a) PASSWORD=${OPTARG};;
+        *) echo "Usage: $0 [-h hostname] [-u username] [-p port] [-a password]"; exit 1;;
+    esac
+done
+
+# Build the docker run command with optional hostname and username arguments
+CMD="docker run -it --rm redis:latest redis-cli"
+
+# Add the hostname option if provided
+if [ -n "$HOSTNAME" ]; then
+    CMD+=" -h $HOSTNAME"
+fi
+
+# Add the username option to redis-cli if provided
+if [ -n "$USERNAME" ]; then
+    CMD+=" -u $USERNAME"
+fi
+
+# Add the port option if provided
+if [ -n "$PORT" ]; then
+    CMD+=" -p $PORT"
+fi
+
+# Add the password option if provided
+if [ -n "$PASSWORD" ]; then
+    CMD+=" -a $PASSWORD"
+fi
+
+# Execute the command
+eval "$CMD"
