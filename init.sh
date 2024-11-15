@@ -13,10 +13,10 @@ loading_animation() {
     local pid=$1
     local delay=0.1
     local spin='|/-\'
-    
-    if [ -n "$pid" ] && ps -p $pid > /dev/null 2>&1; then
+
+    if [ -n "$pid" ] && ps -p $pid >/dev/null 2>&1; then
         echo -ne "${YELLOW}Please wait...${NC} "
-        while ps -p $pid > /dev/null 2>&1; do
+        while ps -p $pid >/dev/null 2>&1; do
             for i in $(seq 0 3); do
                 echo -ne "\r${YELLOW}Please wait... ${spin:i:1}${NC}"
                 sleep $delay
@@ -50,7 +50,6 @@ log_error() {
 
 log_info "Starting installation of Zsh, Oh My Zsh, Docker, Micro, Docker Compose, and plugins..."
 
-
 # Update package lists and install dependencies
 if command_exists apt; then
     sudo apt update
@@ -69,7 +68,7 @@ fi
 # Install Docker
 if ! command_exists docker; then
     log_info "Installing Docker..."
-    
+
     if command_exists apt; then
         sudo apt update
         sudo apt install -y docker.io &
@@ -148,17 +147,20 @@ fi
 
 # Add the repository to PATH in .zshrc
 log_info "Adding repository to PATH in .zshrc..."
-echo "export PATH=\"\$PATH:$REPO_DIR\"" >> ~/.zshrc
+echo "export PATH=\"\$PATH:$REPO_DIR\"" >>~/.zshrc
 
 # Add aliases to .zshrc
 log_info "Adding aliases to .zshrc..."
-cat << 'EOF' >> ~/.zshrc
+cat <<'EOF' >>~/.zshrc
 
 # Custom Aliases
 alias redis-cli="redis-cli-docker"
 alias psql="psql-docker"
 alias pg_dump="pg_dump-docker"
 alias pg_restore="pg_restore-docker"
+alias mongodump="mongodump-docker"
+alias mongorestore="mongorestore-docker"
+alias mongosh="mongosh-docker"
 alias d="docker"
 alias dc="docker-compose"
 alias k="kubectl"

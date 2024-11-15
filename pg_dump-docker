@@ -10,21 +10,25 @@ USER=""
 PASSWORD=""
 PORT="5432"  # Default PostgreSQL port
 DB=""
+OUTPUT_DIR="./backup"
+OUTPUT_FILE="backup.sql"
 
 # Function to display usage
 usage() {
-    echo "Usage: $0 [-u username] [-h hostname] [-p port] [-P password] -d database [pg_dump options]"
+    echo "Usage: $0 [-u username] [-h hostname] [-p port] [-P password] [-d database] [-o output_directory] [-f output_file] [pg_dump options]"
     exit 1
 }
 
 # Parse command-line arguments
-while getopts "u:h:p:P:d:" opt; do
+while getopts "u:h:p:P:d:o:f:" opt; do
     case $opt in
         u) USER="$OPTARG" ;;
         h) HOST="$OPTARG" ;;
         p) PORT="$OPTARG" ;;
         P) PASSWORD="$OPTARG" ;;
         d) DB="$OPTARG" ;;
+        o) OUTPUT_DIR="$OPTARG" ;;
+        f) OUTPUT_FILE="$OPTARG" ;;
         *) usage ;;
     esac
 done
@@ -34,8 +38,14 @@ if [ -z "$DB" ]; then
     usage
 fi
 
-# Run pg_dump using Docker
+# Ensure output directory exists on the host
+mkdir -p "$OUTPUT_DIR"
+
+# Run pg_dump using Docker, with the output file saved on the host
 docker run -it --rm \
     --network=host \
     -e PGPASSWORD="$PASSWORD" \
-    postgres:latest pg_dump -h "$HOST" -U "$USER" -p "$PORT" "$DB" "$@"
+    -v "$OUTPUT_DIR":/backup \
+    postgres:latest pg_dump -h "$HOST" -U "$USER" -p "$PORT" "$DB" "$@" > "$OUTPUT_DIR/$OUTPUT_FILE"
+
+echo "Backup completed and saved to $OUTPUT_DIR/$OUTPUT_FILE"

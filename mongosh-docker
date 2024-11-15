@@ -1,0 +1,42 @@
+#!/bin/bash
+
+set -o errexit
+set -o pipefail
+set -o nounset
+
+# Default values
+HOST="localhost"
+USER=""
+PASSWORD=""
+PORT="27017"  # Default MongoDB port
+DATABASE=""
+
+# Function to display usage
+usage() {
+    echo "Usage: $0 [-u username] [-h hostname] [-p port] [-P password] [-d database] [mongo options]"
+    exit 1
+}
+
+# Parse command-line arguments
+while getopts "h:p:u:P:" opt; do
+    case $opt in
+        u) USER="$OPTARG" ;;
+        h) HOST="$OPTARG" ;;
+        p) PORT="$OPTARG" ;;
+        P) PASSWORD="$OPTARG" ;;
+        d) DATABASE="$OPTARG" ;;
+        *) usage ;;
+    esac
+done
+
+# Shift parsed options away
+shift $((OPTIND - 1))
+
+# Construct MongoDB URI
+MONGO_URI="mongodb://${USER}:${PASSWORD}@${HOST}:${PORT}/${DATABASE}"
+
+# Run the mongo CLI using Docker
+docker run -it --rm mongo \
+    mongosh --uri="$MONGO_URI" "$@"
+
+echo "Disconnected from MongoDB on $HOST:$PORT."

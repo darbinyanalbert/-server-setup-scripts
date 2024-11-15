@@ -5,16 +5,16 @@ set -o pipefail
 set -o nounset
 
 # Default values
-HOST=""
+HOST="localhost"
 USER=""
 PASSWORD=""
-PORT="5432"  # Default PostgreSQL port
-DB=""
+PORT="27017"  # Default MongoDB port
+DATABASE=""
 INPUT_FILE=""
 
 # Function to display usage
 usage() {
-    echo "Usage: $0 [-u username] [-h hostname] [-p port] [-P password] -d database -f input_file [pg_restore options]"
+    echo "Usage: $0 [-u username] [-h hostname] [-p port] [-P password] [-d database] -f input_file [mongorestore options]"
     exit 1
 }
 
@@ -25,7 +25,7 @@ while getopts "u:h:p:P:d:f:" opt; do
         h) HOST="$OPTARG" ;;
         p) PORT="$OPTARG" ;;
         P) PASSWORD="$OPTARG" ;;
-        d) DB="$OPTARG" ;;
+        d) DATABASE="$OPTARG" ;;
         f) INPUT_FILE="$OPTARG" ;;
         *) usage ;;
     esac
@@ -36,21 +36,21 @@ if [ -z "$DB" ] || [ -z "$INPUT_FILE" ]; then
     usage
 fi
 
-# Ensure the input file exists
-if [ ! -f "$INPUT_FILE" ]; then
-    echo "Error: Input file '$INPUT_FILE' does not exist."
+# Ensure the input file or directory exists
+if [ ! -e "$INPUT_FILE" ]; then
+    echo "Error: Input file or directory '$INPUT_FILE' does not exist."
     exit 1
 fi
 
-# Extract the directory and filename from the input file path
+# Extract the directory and filename from the input path
 INPUT_DIR=$(dirname "$INPUT_FILE")
 INPUT_FILENAME=$(basename "$INPUT_FILE")
 
-# Run pg_restore using Docker
-docker run -it --rm \
-    --network=host \
-    -e PGPASSWORD="$PASSWORD" \
-    -v "$INPUT_DIR":/backup \
-    postgres:latest pg_restore -h "$HOST" -U "$USER" -p "$PORT" -d "$DB" "/backup/$INPUT_FILENAME" "$@"
+# Construct MongoDB URI
+MONGO_URI="mongodb://${USER}:${PASSWORD}@${HOST}:${PORT}/${DATABASE}"
+
+# Run mongorestore using Docker
+docker run -it --rm -v "$INPUT_DIR":/backup mongo \
+    mongorestore --uri="$MONGO_URI" "/backup/$INPUT_FILENAME" "$@"
 
 echo "Restore completed from $INPUT_FILE to database $DB on host $HOST."
